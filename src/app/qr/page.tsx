@@ -7,12 +7,10 @@ import QRGenerator from "../../../components/QRGenerator";
 
 export default function QRPage() {
   const [activeTab, setActiveTab] = useState<"scan" | "generate">("scan");
-  const [scanned, setScanned] = useState(false);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [status, setStatus] = useState("Scan QR code to check in");
 
   const handleScan = () => {
-    setScanned(true);
     setStatus("QR code scanned successfully!");
     setShowRoleSelection(true);
   };
@@ -22,7 +20,7 @@ export default function QRPage() {
       await startUserTracking(role);
       setStatus(`Tracking started as ${role}`);
       setShowRoleSelection(false);
-    } catch (error) {
+    } catch (err) {
       setStatus(`Error: Could not start tracking as ${role}`);
     }
   };
@@ -75,13 +73,13 @@ export default function QRPage() {
               onClick={() => handleRoleSelect("guest")}
               className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
             >
-              I'm a Guest
+              I&apos;m a Guest
             </button>
             <button
               onClick={() => handleRoleSelect("employee")}
               className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700"
             >
-              I'm Staff
+              I&apos;m Staff
             </button>
           </div>
         )}

@@ -11,7 +11,10 @@ const getLocation = (timeout = 10000): Promise<{ latitude: number; longitude: nu
       return;
     }
 
-    let timer: NodeJS.Timeout;
+    const timer: NodeJS.Timeout = setTimeout(() => {
+      reject(new Error("Location request timed out. Please try again."));
+    }, timeout);
+
     const options = {
       enableHighAccuracy: true,
       timeout,
@@ -33,10 +36,6 @@ const getLocation = (timeout = 10000): Promise<{ latitude: number; longitude: nu
           : "Could not get your location. Please try again."
       ));
     };
-
-    timer = setTimeout(() => {
-      reject(new Error("Location request timed out. Please try again."));
-    }, timeout);
 
     navigator.geolocation.getCurrentPosition(success, error, options);
   });
@@ -72,14 +71,14 @@ export async function startUserTracking(role: 'guest' | 'employee') {
           location: new GeoPoint(position.coords.latitude, position.coords.longitude),
           lastUpdated: serverTimestamp()
         });
-      } catch (error) {
-        console.error("Failed to update location:", error);
+      } catch (err) {
+        console.error("Failed to update location:", err);
       }
     };
 
     watchId = navigator.geolocation.watchPosition(
       updateLocation,
-      (error) => console.error("Tracking error:", error),
+      (err) => console.error("Tracking error:", err),
       { enableHighAccuracy: true, maximumAge: 10000 }
     );
 
@@ -97,17 +96,17 @@ export async function startUserTracking(role: 'guest' | 'employee') {
             status: "checked-out",
             lastUpdated: serverTimestamp()
           });
-        } catch (error) {
-          console.error("Error during check-out:", error);
-          throw error;
+        } catch (err) {
+          console.error("Error during check-out:", err);
+          throw err;
         }
       },
       docId: docRef.id
     };
 
-  } catch (error) {
-    console.error("Tracking initialization failed:", error);
-    throw error;
+  } catch (err) {
+    console.error("Tracking initialization failed:", err);
+    throw err;
   }
 }
 
@@ -120,8 +119,8 @@ export async function checkOutUser(docId: string) {
       status: "checked-out",
       lastUpdated: serverTimestamp()
     });
-  } catch (error) {
-    console.error("Check-out failed:", error);
-    throw error;
+  } catch (err) {
+    console.error("Check-out failed:", err);
+    throw err;
   }
 }
