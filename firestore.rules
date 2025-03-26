@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read/write access to tracked_users collection
+    // (For development/testing only - tighten these for production)
+    match /tracked_users/{document} {
+      allow read, write: if true;
+    }
+    
+}
+}
