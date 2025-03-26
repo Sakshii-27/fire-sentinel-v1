@@ -20,7 +20,7 @@ export default function QRPage() {
       await startUserTracking(role);
       setStatus(`Tracking started as ${role}`);
       setShowRoleSelection(false);
-    } catch (err) {
+    } catch {
       setStatus(`Error: Could not start tracking as ${role}`);
     }
   };
