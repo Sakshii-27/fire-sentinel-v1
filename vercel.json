@@ -1,9 +1,11 @@
 {
-    "build": {
-      "env": {
-        "NODE_ENV": "production"
+    "ignoreCommand": "exit 0",
+    "functions": {
+      "api/**/*.ts": {
+        "runtime": "nodejs18.x"
       }
     },
-    "ignoreCommand": "echo 'Skipping Firebase Functions'"
+    "buildCommand": "npm run build",
+    "outputDirectory": ".next"
   }
   
