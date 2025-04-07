@@ -121,7 +121,7 @@ export default function Dashboard() {
       title: "Emergency Plans", 
       description: "View and manage evacuation routes with Interactive maps", 
       icon: "🚨",
-      href: "/map",
+      href: "/plans",
       color: "from-red-500 to-red-600"
     },
     { 
