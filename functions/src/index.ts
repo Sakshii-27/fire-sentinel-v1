@@ -7,11 +7,12 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-import * as functions from "firebase-functions";
 
-// Basic HTTP function example
-export const helloWorld = functions.https.onRequest((request, response) => {
-  functions.logger.info("Hello logs!");
+import { logger } from "firebase-functions";
+import { onRequest } from "firebase-functions/v2/https";
+
+export const helloWorld = onRequest((request, response) => {
+  logger.info("Hello logs!", {structuredData: true});
   response.send("Hello from Firebase!");
 });
 
