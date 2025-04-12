@@ -61,7 +61,7 @@ export default function Home() {
       const point = leafletMapRef.current.latLngToContainerPoint([lat, lng])
       const img = new Image()
       img.crossOrigin = 'Anonymous'
-      img.src = imageOverlayRef.current.getUrl()
+      img.src = (imageOverlayRef.current as any)._url
 
       await new Promise((resolve) => {
         img.onload = resolve
@@ -275,7 +275,10 @@ export default function Home() {
         if (occupant.animationId) cancelAnimationFrame(occupant.animationId)
 
         const occupantLatLng = occupant.marker.getLatLng()
-        let nearestExit = { distance: Infinity, latLng: null }
+        let nearestExit: { distance: number; latLng: L.LatLng | null } = {
+          distance: Infinity,
+          latLng: null
+        };
 
         exitsRef.current.forEach(exit => {
           if (!disabledExits.includes(exit.marker)) {
@@ -288,8 +291,11 @@ export default function Home() {
         })
 
         if (nearestExit.latLng) {
+          const targetLat = nearestExit.latLng.lat
+          const targetLng = nearestExit.latLng.lng
           occupant.animationId = requestAnimationFrame(() =>
-            moveToExit(occupant.marker, occupantLatLng.lat, occupantLatLng.lng, nearestExit.latLng.lat, nearestExit.latLng.lng, occupant.type)
+            moveToExit(occupant.marker, occupantLatLng.lat, occupantLatLng.lng,
+              targetLat, targetLng, occupant.type)
           )
         } else {
           setOccupantCounts(prev => ({
@@ -806,7 +812,7 @@ export default function Home() {
       if (!validPosition) continue
 
       const isStaff = staffCount < staffTarget
-      const type = isStaff ? 'staff' : 'guest'
+      const type: 'staff' | 'guest' = isStaff ? 'staff' : 'guest' // Explicit type annotation
 
       if (isStaff) staffCount++
       else guestCount++
@@ -823,7 +829,7 @@ export default function Home() {
 
       const occupantObj = {
         marker: occupant,
-        animationId: requestAnimationFrame(() => moveOccupant(occupant, lat, lng)),
+        animationId: requestAnimationFrame(() => moveOccupant(occupant, lat, lng)) as number | null,
         type: type
       }
       occupantsRef.current.push(occupantObj)
