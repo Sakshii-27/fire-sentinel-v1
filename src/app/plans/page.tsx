@@ -132,7 +132,7 @@ export default function Home() {
       const map = leafletMapRef.current
       const clickHandler = (e: L.LeafletMouseEvent) => {
         const nextExitNumber = exitCount + 1
-        addExitToMap(e.latlng.lat, e.latlng.lng, `Exit ${nextExitNumber}`, true)
+        addExitToMap(e.latlng.lat, e.latlng.lng, `Exit ,{nextExitNumber}`, true)
         setExitCount(nextExitNumber)
       }
 

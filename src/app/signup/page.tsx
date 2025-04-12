@@ -1,4 +1,3 @@
-// app/signup/page.tsx
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -9,10 +8,11 @@ import {
   createUserWithEmailAndPassword, 
   updateProfile,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  fetchSignInMethodsForEmail
 } from 'firebase/auth'
 import { auth, db } from '../firebaseConfig'
-import { doc, setDoc, getFirestore } from 'firebase/firestore'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -27,10 +27,11 @@ export default function Signup() {
   const router = useRouter()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,44 +40,67 @@ export default function Signup() {
     setIsSubmitting(true)
     
     try {
+      // Verify email isn't registered with Google
+      const methods = await fetchSignInMethodsForEmail(auth, formData.email)
+
+      if (methods.includes('google.com')) {
+        setError('This email is registered with Google. Please login with Google instead.')
+        return
+      }
+
+      if (methods.length > 0) {
+        setError('This email is already registered. Please login instead.')
+        return
+      }
+      if (methods.includes('google.com')) {
+        throw new Error('auth/email-registered-with-google')
+      }
+
+      // Create user account
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       )
       
+      // Update user profile
       await updateProfile(userCredential.user, {
         displayName: formData.name
       })
 
-      const db = getFirestore()
+      // Create user document in Firestore
       await setDoc(doc(db, 'users', userCredential.user.uid), {
+        uid: userCredential.user.uid,
         name: formData.name,
         email: formData.email,
         hotelName: formData.hotelName,
-        phone: formData.phone,
+        phone: formData.phone || '',
         role: 'admin',
-        createdAt: new Date()
+        createdAt: new Date(),
+        authProvider: 'email/password'
       })
 
+      // Redirect to dashboard
       router.push('/dashboard')
     } catch (error: any) {
-      console.error('Signup failed:', error)
+      console.error('Signup error:', error)
       
-      // Enhanced error handling
-      switch (error.code) {
+      switch (error.code || error.message) {
         case 'auth/email-already-in-use':
-          setError('This email is already registered. Please login instead.')
-          setFormData(prev => ({...prev, email: ''})) // Clear email field
+        case 'auth/email-registered-with-google':
+          setError('This email is already registered. Please sign in instead.')
           break
         case 'auth/weak-password':
-          setError('Password should be at least 6 characters')
+          setError('Password must be at least 8 characters')
           break
         case 'auth/invalid-email':
           setError('Please enter a valid email address')
           break
+        case 'permission-denied':
+          setError('Database error. Please contact support.')
+          break
         default:
-          setError('Signup failed. Please try again.')
+          setError(error.message || 'Signup failed. Please try again.')
       }
     } finally {
       setIsSubmitting(false)
@@ -89,30 +113,44 @@ export default function Signup() {
       setIsSubmitting(true)
       
       const provider = new GoogleAuthProvider()
+      provider.setCustomParameters({ prompt: 'select_account' })
       const result = await signInWithPopup(auth, provider)
       
-      // Check if this is a new user
-      if (result.user.metadata.creationTime === result.user.metadata.lastSignInTime) {
-        // New user - create profile in Firestore
-        const db = getFirestore()
+      // Check if user exists in Firestore
+      const userDoc = await getDoc(doc(db, 'users', result.user.uid))
+      
+      if (!userDoc.exists()) {
+        // Create new user document for Google sign-in
         await setDoc(doc(db, 'users', result.user.uid), {
+          uid: result.user.uid,
           name: result.user.displayName || 'Google User',
-          email: result.user.email,
+          email: result.user.email || '',
           hotelName: 'To be completed',
           phone: result.user.phoneNumber || '',
           role: 'admin',
-          createdAt: new Date()
+          createdAt: new Date(),
+          authProvider: 'google.com'
         })
         
-        // Redirect to profile completion page
-        router.push('/complete-profile')
+        // Redirect to profile completion
+        router.push('/dashboard')
       } else {
-        // Existing user - go to dashboard
+        // Existing user goes to dashboard
         router.push('/dashboard')
       }
     } catch (error: any) {
-      console.error('Google sign-in failed:', error)
-      setError(error.message || 'Google sign-in failed. Please try again.')
+      console.error('Google sign-in error:', error)
+      
+      switch (error.code) {
+        case 'auth/account-exists-with-different-credential':
+          setError('This email is registered with email/password. Please sign in that way first.')
+          break
+        case 'auth/popup-closed-by-user':
+          setError('Sign-in was cancelled. Please try again.')
+          break
+        default:
+          setError('Google sign-in failed. Please try again.')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -134,7 +172,6 @@ export default function Signup() {
             <h2 className="text-xl font-semibold text-white/90">Create Hotel Staff Account</h2>
           </div>
 
-          {/* Google Sign-In Button */}
           <div className="px-6 pt-6">
             <button
               onClick={handleGoogleSignIn}
@@ -157,102 +194,82 @@ export default function Signup() {
             <div className="flex-grow border-t border-gray-600"></div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Name Field */}
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="name"
-                  className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400 transition"
-                  placeholder="John Doe"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-                <span className="absolute right-3 top-3 text-gray-400">👤</span>
-              </div>
-            </motion.div>
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Full Name</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                placeholder="John Doe"
+                required
+              />
+            </div>
 
-            {/* Email Field */}
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  name="email"
-                  className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400 transition"
-                  placeholder="user@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-                <span className="absolute right-3 top-3 text-gray-400">✉</span>
-              </div>
-            </motion.div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                placeholder="user@example.com"
+                required
+              />
+            </div>
 
-            {/* Password Field */}
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
-              <div className="relative">
-                <input
-                  type="password"
-                  name="password"
-                  className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400 transition"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  minLength={8}
-                />
-                <span className="absolute right-3 top-3 text-gray-400">🔒</span>
-              </div>
-            </motion.div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Password</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                minLength={8}
+                className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                placeholder="••••••••"
+                required
+              />
+            </div>
 
-            {/* Hotel Name Field */}
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Hotel Name</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="hotelName"
-                  className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400 transition"
-                  placeholder="Grand Plaza Hotel"
-                  value={formData.hotelName}
-                  onChange={handleChange}
-                  required
-                />
-                <span className="absolute right-3 top-3 text-gray-400">🏨</span>
-              </div>
-            </motion.div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Hotel Name</label>
+              <input
+                type="text"
+                name="hotelName"
+                value={formData.hotelName}
+                onChange={handleChange}
+                className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                placeholder="Grand Plaza Hotel"
+                required
+              />
+            </div>
 
-            {/* Phone Field */}
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Phone Number</label>
-              <div className="relative">
-                <input
-                  type="tel"
-                  name="phone"
-                  className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400 transition"
-                  placeholder="+1 (555) 123-4567"
-                  value={formData.phone}
-                  onChange={handleChange}
-                />
-                <span className="absolute right-3 top-3 text-gray-400">📱</span>
-              </div>
-            </motion.div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Phone Number (Optional)</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
 
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-sm text-center"
+                className="p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300 text-sm"
               >
-               {error}
+                {error}
                 {error.includes('already registered') && (
                   <div className="mt-2">
-                    <Link href="/login" className="text-blue-400 underline text-sm">
+                    <Link href="/login" className="text-blue-400 underline text-sm hover:text-blue-300 transition">
                       Go to login page
                     </Link>
                   </div>
@@ -260,7 +277,12 @@ export default function Signup() {
               </motion.div>
             )}
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="pt-2"
+            >
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -268,7 +290,15 @@ export default function Signup() {
                   isSubmitting ? 'bg-blue-700' : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg hover:shadow-xl'
                 }`}
               >
-                {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating Account...
+                  </span>
+                ) : 'Create Account'}
               </button>
             </motion.div>
           </form>
