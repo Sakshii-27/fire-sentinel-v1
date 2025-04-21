@@ -2497,8 +2497,8 @@
 
 'use client'
 
-import Head from 'next/head'
 import { useEffect, useRef, useState } from 'react'
+import Head from 'next/head'
 import dynamic from 'next/dynamic'
 
 // Types
@@ -2523,9 +2523,6 @@ const EXIT_DISABLE_RADIUS = 200
 const FIRE_EXPANSION_RATE = 0.7 // pixels per second
 const DEMO_OCCUPANTS_COUNT = 60
 const DEMO_STAFF_PERCENTAGE = 0.45
-
-// Dynamic imports
-const RadiusIcon = dynamic(() => import('lucide-react').then(mod => mod.Radius), { ssr: false })
 
 export default function FireSafetyDashboard() {
   // State
@@ -2564,18 +2561,29 @@ export default function FireSafetyDashboard() {
   const fireRef = useRef<FireMarker | null>(null)
   const lastFireUpdateRef = useRef<number>(0)
 
-  // Load Leaflet asynchronously
+  // Load Leaflet asynchronously without CSS import
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      import('leaflet')
-        .then((leaflet) => {
-          // Initialize Leaflet CSS (required for proper rendering)
-          import('leaflet/dist/leaflet.css')
+      const loadLeaflet = async () => {
+        try {
+          // Dynamically load Leaflet
+          const L = await import('leaflet')
+          
+          // Manually inject Leaflet CSS (bypass module system)
+          const link = document.createElement('link')
+          link.rel = 'stylesheet'
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+          link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='
+          link.crossOrigin = ''
+          document.head.appendChild(link)
+          
           setIsLeafletReady(true)
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Failed to load Leaflet:', error)
-        })
+        }
+      }
+      
+      loadLeaflet()
     }
   }, [])
 
