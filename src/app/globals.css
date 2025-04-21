@@ -24,7 +24,6 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
 /* In styles/globals.css */
 @import "leaflet/dist/leaflet.css";
 
@@ -99,7 +98,7 @@ a {
 .card {
   background: white;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   padding: 1rem;
 }
 
@@ -125,11 +124,11 @@ a {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: #ffffff;
+  background: #eee;
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
   font-weight: bold;
-  color: black;
+  color: #0a0a0a;
 }
 
 .map {
@@ -249,7 +248,7 @@ a {
   margin-top: 1rem;
 }
 
-.active {
+.active{
   background-color: #228be6;
   color: #e8e8e8;
   border-radius: 5px;
@@ -258,7 +257,7 @@ a {
   margin-right: 10px;
 }
 
-.aluu {
+.aluu{
   background: #228be6;
   color: white;
   border: none;
