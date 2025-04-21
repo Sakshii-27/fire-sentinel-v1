@@ -139,7 +139,7 @@ export default function Signup() {
         router.push('/dashboard')
       }
     } catch (error: any) {
-      console.error('Google sign-in error:', error)
+      console.error("You already have an account, please signin instead", error)
       
       switch (error.code) {
         case 'auth/account-exists-with-different-credential':
@@ -149,7 +149,7 @@ export default function Signup() {
           setError('Sign-in was cancelled. Please try again.')
           break
         default:
-          setError('Google sign-in failed. Please try again.')
+          setError("You already have an account, please login")
       }
     } finally {
       setIsSubmitting(false)
