@@ -24,6 +24,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* In styles/globals.css */
+@import "leaflet/dist/leaflet.css";
+
+
+
 /* In styles/globals.css */
 @import "leaflet/dist/leaflet.css";
 
@@ -93,7 +99,7 @@ a {
 .card {
   background: white;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   padding: 1rem;
 }
 
@@ -119,10 +125,11 @@ a {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: #eee;
+  background: #ffffff;
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
   font-weight: bold;
+  color: black;
 }
 
 .map {
@@ -168,6 +175,7 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+
 }
 
 .button-row button {
@@ -184,6 +192,7 @@ a {
   list-style: none;
   padding: 0;
   margin: 0 0 1rem;
+  color: #0a0a0a;
 }
 
 .status-list li {
@@ -208,6 +217,8 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  background: #228be6;
+  color: white;
 }
 
 .status-buttons .blue {
@@ -236,4 +247,23 @@ a {
   font-weight: bold;
   color: #e84430;
   margin-top: 1rem;
+}
+
+.active {
+  background-color: #228be6;
+  color: #e8e8e8;
+  border-radius: 5px;
+  border-width: 0px;
+  padding: 10px 10px;
+  margin-right: 10px;
+}
+
+.aluu {
+  background: #228be6;
+  color: white;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
 }
